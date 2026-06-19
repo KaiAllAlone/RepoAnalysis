@@ -70,33 +70,33 @@ async def exchange_code_for_token(
             else:
                 raise Exception(f"OAuth Error: {poll_result}")
 
-    async def _github_request(
-    client: httpx.AsyncClient,
-    method: str,
-    url: str,
-    token: str,
-    **kwargs
-    ) -> httpx.Response:
-        """Make a request to GitHub API with authentication and rate limit handling."""
-        headers = {
-            "Authorization": f"token {token}",
-            "Accept": "application/vnd.github.v3+json",
-            **kwargs.pop("headers", {}),
-        }
-        response = await client.request(method, url, headers=headers, **kwargs)
+async def _github_request(
+client: httpx.AsyncClient,
+method: str,
+url: str,
+token: str,
+**kwargs
+) -> httpx.Response:
+    """Make a request to GitHub API with authentication and rate limit handling."""
+    headers = {
+        "Authorization": f"token {token}",
+        "Accept": "application/vnd.github.v3+json",
+        **kwargs.pop("headers", {}),
+    }
+    response = await client.request(method, url, headers=headers, **kwargs)
 
-        # Check for rate limit exceeded
-        if response.status_code == 403:
-            # gitHub returns 403 for rate limit exceeded with header "X-RateLimit-Remaining: 0"
-            remaining = response.headers.get("X-RateLimit-Remaining")
-            if remaining == "0":
-                reset_time = response.headers.get("X-RateLimit-Reset")
-                raise GitHubRateLimitExceeded(
-                    f"GitHub API rate limit exceeded. Reset at {reset_time}"
-                )
-        # For other errors, raise for status
-        response.raise_for_status()
-        return response
+    # Check for rate limit exceeded
+    if response.status_code == 403:
+        # gitHub returns 403 for rate limit exceeded with header "X-RateLimit-Remaining: 0"
+        remaining = response.headers.get("X-RateLimit-Remaining")
+        if remaining == "0":
+            reset_time = response.headers.get("X-RateLimit-Reset")
+            raise GitHubRateLimitExceeded(
+                f"GitHub API rate limit exceeded. Reset at {reset_time}"
+            )
+    # For other errors, raise for status
+    response.raise_for_status()
+    return response
 
 async def fetch_github_repo(
     repo_url: str,
