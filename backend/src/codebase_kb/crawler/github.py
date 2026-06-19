@@ -2,24 +2,22 @@ import asyncio
 import base64
 from typing import List, Optional, Tuple
 import httpx
-from crawler.config import redirect_uri
-from .models import FileEntry
+from .configs.config import redirect_uri
+from .models.models import FileEntry
 import dotenv
+import os
 from dotenv import load_dotenv
 import requests
 class GitHubRateLimitExceeded(Exception):
     """Raised when GitHub API rate limit is exceeded."""
     pass
-
-
-client_secret=load_dotenv("client_secret")
-client_id=load_dotenv("client_id")
+load_dotenv()
+client_secret=os.getenv("client_secret")
+client_id=os.getenv("client_id")
 
 
 async def exchange_code_for_token(
     client_id: str,
-    client_secret: str,
-    code: str
 ) -> str:
     """
     Exchanges the temporary GitHub OAuth code for a permanent access token.
@@ -34,14 +32,17 @@ async def exchange_code_for_token(
             "client_id": client_id,
         }
         
-        device_code=requests.get(url=url,data=data,headers=headers)
+        device_code_response=requests.post(url=url,data=data,headers=headers)
+        device_code_response=device_code_response.json()
         print('='*50)
         print("\n")
-        print("User Code= ",device_code['user_code'],"\n")
-        print("Device Code= ",device_code['device_code'],"\n")
-        print("verification URI= ",device_code['verification_uri'],"\n")
+        print("User Code= ",device_code_response['user_code'],"\n")
+        print("Device Code= ",device_code_response['device_code'],"\n")
+        print("verification URI= ",device_code_response['verification_uri'],"\n")
         print("Please go to the Verfication URI  to authorize")
         print("\n")
+        interval=device_code_response['interval']
+        device_code=device_code_response['device_code']
         print('='*50)
         token_url = "https://github.com/login/oauth/access_token"
         poll_data = {
@@ -52,7 +53,6 @@ async def exchange_code_for_token(
             
         while True:
             await asyncio.sleep(interval) # Wait the required minimum timeframe
-            
             poll_response = await client.post(token_url, data=poll_data, headers=headers)
             poll_result = poll_response.json()
             
