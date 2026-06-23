@@ -7,7 +7,27 @@ class CodeGraph:
     def __init__(self):
         # We use a DiGraph (Directed Graph) because imports and function calls go in a specific direction
         self.g = nx.DiGraph()
-
+        self.metrics = {}
+    
+    @classmethod
+    def from_payload(cls, payload: dict) -> "CodeGraph":
+        """
+        Rehydrates a CodeGraph object from the LangGraph state dictionary.
+        """
+        instance = cls()
+        
+        # 1. Rebuild the NetworkX Graph from the nodes and edges
+        for node in payload.get("nodes", []):
+            instance.g.add_node(node["id"], **node)
+            
+        for edge in payload.get("edges", []):
+            instance.g.add_edge(edge["src"], edge["dst"], **edge)
+            
+        # 2. Restore the pre-calculated metrics (PageRank, Communities)
+        instance.metrics = payload.get("metrics", {})
+        
+        return instance
+    
     def add_nodes(self, nodes: List[CodeNode]) -> None:
         for n in nodes:
             # We store all the dataclass properties inside the graph node itself

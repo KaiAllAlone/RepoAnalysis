@@ -8,3 +8,7 @@ httpx
 dotenv
 tqdm
 python-dotenv
+langchain
+langchain_openai
+langchain_google_genai
+langchain_huggingface
