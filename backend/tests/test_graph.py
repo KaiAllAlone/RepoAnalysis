@@ -1,5 +1,6 @@
 import sys
 from pathlib import Path
+import matplotlib.pyplot as plt
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
@@ -34,6 +35,8 @@ def test_on_real_repo(repo_path: str):
     print(f"Graph built successfully!")
     print(f"Total Nodes: {cg.g.number_of_nodes()}")
     print(f"Total Edges: {cg.g.number_of_edges()}")
+    nx.draw(cg.g, with_labels=True)
+    plt.show()
     
     if cg.g.number_of_nodes() == 0:
         print("Empty graph. Did you point it to a valid Python repo?")
