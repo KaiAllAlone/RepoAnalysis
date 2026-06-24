@@ -14,12 +14,8 @@ from langchain_huggingface import ChatHuggingFace, HuggingFaceEndpoint
 from codebase_kb.graph.graph import build_graph
 
 async def main():
-    hf_token = os.getenv("HUGGINGFACE_API_KEY")
-    if not hf_token:
-        print("ERROR: Please set the HUGGINGFACE_API_KEY environment variable.")
-        print("Example (Windows CMD): set HUGGINGFACE_API_KEY=hf_your_token")
-        print("Example (PowerShell): $env:HUGGINGFACE_API_KEY=\"hf_your_token\"")
-        sys.exit(1)
+    hf_token = os.getenv("HUGGINGFACE_API_KEY", "dummy_token")
+    os.environ["HUGGINGFACE_API_KEY"] = hf_token
 
     print("Setting up HuggingFace LLM endpoint...")
     try:
@@ -37,14 +33,16 @@ async def main():
         sys.exit(1)
 
     # We patch the router so it bypasses the database API key lookup and uses our HF model directly
-    with patch("codebase_kb.graph.nodes.identify_abstractions_node.get_provider_for_user", new_callable=AsyncMock) as mock_get_provider:
-        mock_get_provider.return_value = mock_llm
+    with patch("codebase_kb.graph.nodes.identify_abstractions_node.get_provider_for_user", new_callable=AsyncMock) as mock_get_provider1, \
+         patch("codebase_kb.graph.nodes.analyze_relationships.get_provider_for_user", new_callable=AsyncMock) as mock_get_provider2:
+        mock_get_provider1.return_value = mock_llm
+        mock_get_provider2.return_value = mock_llm
         
         print("Compiling LangGraph...")
         graph = build_graph()
         
         # Test input state using a very small public repo that actually contains Python code
-        repo_url = "https://github.com/KaiAllAlone/Q-Learning-From-Scratch"
+        repo_url = "https://github.com/KaiAllAlone/Smart_Day_Planner_Agno_Framework"
         
         state = {
             "run_id": "test_run_123",
@@ -68,31 +66,41 @@ async def main():
             # If HF inference API returns empty, it will throw an error.
             result = await graph.ainvoke(state, config=config)
             print("\n=== Workflow Completed Successfully! ===")
-            print(result)
             print("\nIdentified Abstractions:")
-            for abs_ in result.get("abstractions", []):
-                print(f" - {abs_.get('name')}: {abs_.get('description')}")
+            print(result)
+            # for abs_ in result.get("abstractions", []):
+            #     print(abs_)
+            #     print(f" - {abs_.get('name')}: {abs_.get('description')}")
+            
+            print("\nArchitectural Summary:")
+            print(result.get("summary", "No summary available."))
+            
+            print("\nIdentified Relationships:")
+            for rel in result.get("relationships", []):
+                print(f" - [{rel.get('from')}] --({rel.get('label')} [{rel.get('kind')}])--> [{rel.get('to')}]")
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             print(f"\nWorkflow failed with error: {e}")
         
-        print("\n=== FINAL STATE KEYS ===")
-        for key in result.keys():
-            print(f"- {key}")
+        # print("\n=== FINAL STATE KEYS ===")
+        # for key in result.keys():
+        #     print(f"- {key}")
             
-        print("\n=== SOME STATE DETAILS ===")
-            # Print how many files were fetched
-        if "files" in result:
-            print(f"Total files fetched: {len(result['files'])}")
+        # print("\n=== SOME STATE DETAILS ===")
+        #     # Print how many files were fetched
+        # if "files" in result:
+        #     print(f"Total files fetched: {len(result['files'])}")
             
-            # Print how many nodes/edges are in the code graph
-        if "code_graph" in result:
-            nodes = result["code_graph"].get("nodes", [])
-            edges = result["code_graph"].get("edges", [])
-            print(f"Code Graph size: {len(nodes)} nodes, {len(edges)} edges")
+        #     # Print how many nodes/edges are in the code graph
+        # if "code_graph" in result:
+        #     nodes = result["code_graph"].get("nodes", [])
+        #     edges = result["code_graph"].get("edges", [])
+        #     print(f"Code Graph size: {len(nodes)} nodes, {len(edges)} edges")
             
-            # If you REALLY want to print everything (warning: massive output):
-            # import pprint
-            # pprint.pprint(result)
+        #     # If you REALLY want to print everything (warning: massive output):
+        #     # import pprint
+        #     # pprint.pprint(result)
 
 
 if __name__ == "__main__":

@@ -27,9 +27,9 @@ codebase. Reference them by exact name. Do not invent symbols or file paths.
 ## Your Task
 
 Cluster the modules above into **between 5 and {{ max_abstractions }} core
-abstractions** (concepts that a developer onboarding to this repo would need
+abstractions** (concepts that a complete newbie onboarding to this repo would need
 to understand). An abstraction should be a thematic concept, not a single
-file — but it should be anchored to real modules.
+file — but it should be anchored to real modules.Make the abstraction very clear to understand and avoid using technical jargon and if any technical keywords must be used clearly explain its meaning also.
 
 Output a single JSON array fenced with ```json. Follow this exact schema:
 
