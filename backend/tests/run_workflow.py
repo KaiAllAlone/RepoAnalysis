@@ -11,7 +11,7 @@ sys.path.append(str(Path(__file__).resolve().parents[1] / "src"))
 os.environ["APP_SECRET_KEY"] = "dummy_secret_for_testing"
 
 from langchain_huggingface import ChatHuggingFace, HuggingFaceEndpoint
-from codebase_kb.graph.graph import build_graph
+from src.codebase_kb.graph.graph import build_graph
 
 async def main():
     hf_token = os.getenv("HUGGINGFACE_API_KEY", "dummy_token")
@@ -47,6 +47,7 @@ async def main():
         state = {
             "run_id": "test_run_123",
             "user_id": "test_user",
+            "client_id":os.getenv("client_id","") ,
             "repo_url": repo_url,
             "github_token": os.getenv("GITHUB_TOKEN", ""), # Optional
             "provider": "huggingface",

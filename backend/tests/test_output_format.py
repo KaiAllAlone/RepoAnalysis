@@ -5,7 +5,7 @@ import httpx
 import dotenv
 import os
 from dotenv import load_dotenv
-from codebase_kb.crawler.github import get_output
+from src.codebase_kb.crawler.github import get_output
 
 load_dotenv()
 

@@ -2,8 +2,8 @@ import asyncio
 import base64
 from typing import List, Optional, Tuple
 import httpx
-from codebase_kb.crawler.models.models import FileEntry,CommitEntry
-from codebase_kb.crawler.utils.tree_parser import build_tree,print_tree
+from src.codebase_kb.crawler.models.models import FileEntry,CommitEntry
+from src.codebase_kb.crawler.utils.tree_parser import build_tree,print_tree
 import dotenv
 import tqdm
 import os
@@ -88,18 +88,18 @@ token: str,
         "Accept": "application/vnd.github.v3+json",
         **kwargs.pop("headers", {}),
     }
-    if token:
+    if token and token.strip():
         headers["Authorization"] = f"token {token}"
     response = await client.request(method, url, headers=headers, **kwargs)
 
     # Check for rate limit exceeded
-    if response.status_code == 403:
-        # gitHub returns 403 for rate limit exceeded with header "X-RateLimit-Remaining: 0"
+    if response.status_code in (403, 429):
         remaining = response.headers.get("X-RateLimit-Remaining")
+
         if remaining == "0":
-            reset_time = response.headers.get("X-RateLimit-Reset")
             raise GitHubRateLimitExceeded(
-                f"GitHub API rate limit exceeded. Reset at {reset_time}"
+                f"Rate limit exceeded. Reset at "
+                f"{response.headers.get('X-RateLimit-Reset')}"
             )
     # For other errors, raise for status
     response.raise_for_status()
@@ -305,21 +305,46 @@ def _is_binary(content: bytes) -> bool:
 
 async def get_output(
     repo_url: str,
-    client_id:str, # 100 KB
-) -> List[Dict[str,str]]:
-    """ Get the output in the form of Dictionary {file_path:content}"""
-    output=dict()
-    github_token=os.getenv("GITHUB_TOKEN")
-    if(not github_token):
-        github_token=await exchange_code_for_token(client_id)
-        dotenv.set_key(".env","GITHUB_TOKEN",github_token)
-    load_dotenv(override=True)
-    entries=await fetch_github_repo(repo_url,github_token)
-    for entry in entries:
-        output[entry.path]=entry.content
-    return output
+    client_id: str | None = None,
+):
+    github_token = os.getenv("GITHUB_TOKEN", "")
 
+    try:
+        return await fetch_github_repo(
+            repo_url=repo_url,
+            github_token=github_token,
+        )
 
+    except GitHubRateLimitExceeded:
 
-    
+        print("\nAnonymous GitHub API quota exhausted.")
 
+        if not client_id:
+            client_id = await asyncio.to_thread(
+                input,
+                "Enter GitHub OAuth App Client ID: "
+            )
+            client_id = client_id.strip()
+
+        while True:
+            try:
+                github_token = await exchange_code_for_token(client_id)
+                break
+
+            except Exception as e:
+                print(f"OAuth failed: {e}")
+
+                client_id = await asyncio.to_thread(
+                    input,
+                    "Enter a valid GitHub OAuth App Client ID: "
+                )
+                client_id = client_id.strip()
+
+        dotenv.set_key(".env", "GITHUB_TOKEN", github_token)
+        load_dotenv(override=True)
+        print("\nRetrying with authenticated GitHub API...\n")
+
+        return await fetch_github_repo(
+            repo_url=repo_url,
+            github_token=github_token,
+        )
