@@ -15,6 +15,7 @@ class KnowledgeBuilderState(TypedDict, total=False):
     project_id: str
     org_id: str
     user_id: str
+    client_id: str
     repo_url: str
     github_token: str
     output_dir: str

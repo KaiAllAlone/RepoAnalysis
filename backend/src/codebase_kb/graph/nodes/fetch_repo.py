@@ -1,11 +1,12 @@
 import asyncio
-from codebase_kb.crawler.github import fetch_github_repo
+from codebase_kb.crawler.github import fetch_github_repo, get_output
+from src.codebase_kb.graph.state import KnowledgeBuilderState
 
-async def fetch_repo_node(state: dict) -> dict:
+async def fetch_repo_node(state: KnowledgeBuilderState) -> dict:
     """Node 1: downloads the code from github"""
-    entries = await fetch_github_repo(
+    entries = await get_output(
         repo_url=state["repo_url"],
-        github_token=state["github_token"]
+        # client_id=state["client_id"]
     )
 
     files_list = [{"path": e.path, "content": e.content} for e in entries]
